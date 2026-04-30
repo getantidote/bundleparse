@@ -5,12 +5,22 @@ import (
 	"strings"
 )
 
+type Annotation struct {
+	Key   string
+	Value string
+}
+
+type ParsedLine struct {
+	Bundle      string
+	Annotations []Annotation
+}
+
 func isSpace(b byte) bool {
 	return b == ' ' || b == '\t' || b == '\n' || b == '\r' || b == '\f' || b == '\v'
 }
 
-func ParseLine(line string) (map[string]string, error) {
-	result := make(map[string]string)
+func ParseLine(line string) (ParsedLine, error) {
+	result := ParsedLine{}
 
 	var i int
 	n := len(line)
@@ -37,7 +47,7 @@ func ParseLine(line string) (map[string]string, error) {
 		return result, nil
 	}
 
-	result["bundle"] = bundle
+	result.Bundle = bundle
 
 	// --- parse remaining key:value tokens ---
 	for i < n {
@@ -62,18 +72,18 @@ func ParseLine(line string) (map[string]string, error) {
 		}
 
 		if i >= n || line[i] != ':' {
-			return nil, fmt.Errorf("expected ':' after key near %q", line[start:])
+			return ParsedLine{}, fmt.Errorf("expected ':' after key near %q", line[start:])
 		}
 
 		key := line[start:i]
 		i++ // skip ':'
 
 		if key == "" {
-			return nil, fmt.Errorf("empty key before ':'")
+			return ParsedLine{}, fmt.Errorf("empty key before ':'")
 		}
 
 		if i >= n {
-			return nil, fmt.Errorf("missing value for key %q", key)
+			return ParsedLine{}, fmt.Errorf("missing value for key %q", key)
 		}
 
 		var val strings.Builder
@@ -87,7 +97,7 @@ func ParseLine(line string) (map[string]string, error) {
 				if line[i] == '\\' {
 					i++
 					if i >= n {
-						return nil, fmt.Errorf("unterminated escape in quoted value for key %q", key)
+						return ParsedLine{}, fmt.Errorf("unterminated escape in quoted value for key %q", key)
 					}
 					val.WriteByte(line[i])
 					i++
@@ -103,7 +113,7 @@ func ParseLine(line string) (map[string]string, error) {
 			}
 
 			if !closed {
-				return nil, fmt.Errorf("unterminated double-quoted value for key %q", key)
+				return ParsedLine{}, fmt.Errorf("unterminated double-quoted value for key %q", key)
 			}
 
 		case '\'':
@@ -114,7 +124,7 @@ func ParseLine(line string) (map[string]string, error) {
 				i++
 			}
 			if i >= n {
-				return nil, fmt.Errorf("unterminated single-quoted value for key %q", key)
+				return ParsedLine{}, fmt.Errorf("unterminated single-quoted value for key %q", key)
 			}
 			i++ // skip closing quote
 
@@ -124,7 +134,7 @@ func ParseLine(line string) (map[string]string, error) {
 				if line[i] == '\\' {
 					i++
 					if i >= n {
-						return nil, fmt.Errorf("unterminated escape in unquoted value for key %q", key)
+						return ParsedLine{}, fmt.Errorf("unterminated escape in unquoted value for key %q", key)
 					}
 					val.WriteByte(line[i])
 					i++
@@ -135,7 +145,7 @@ func ParseLine(line string) (map[string]string, error) {
 			}
 		}
 
-		result[key] = val.String()
+		result.Annotations = append(result.Annotations, Annotation{Key: key, Value: val.String()})
 	}
 
 	return result, nil

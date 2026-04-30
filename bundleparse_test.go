@@ -9,93 +9,119 @@ func TestParseLine(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
-		want    map[string]string
+		want    ParsedLine
 		wantErr bool
 	}{
 		{
 			name:  "basic bundle",
 			input: `zsh-users/zsh-autosuggestions kind:zsh`,
-			want: map[string]string{
-				"bundle": "zsh-users/zsh-autosuggestions",
-				"kind":   "zsh",
+			want: ParsedLine{
+				Bundle: "zsh-users/zsh-autosuggestions",
+				Annotations: []Annotation{{
+					Key:   "kind",
+					Value: "zsh",
+				}},
 			},
 		},
 		{
 			name:  "only bundle",
 			input: `zsh-users/zsh-autosuggestions`,
-			want: map[string]string{
-				"bundle": "zsh-users/zsh-autosuggestions",
+			want: ParsedLine{
+				Bundle: "zsh-users/zsh-autosuggestions",
 			},
 		},
 		{
 			name:  "double quoted value",
 			input: `foo pre:"echo hello world"`,
-			want: map[string]string{
-				"bundle": "foo",
-				"pre":    "echo hello world",
+			want: ParsedLine{
+				Bundle: "foo",
+				Annotations: []Annotation{{
+					Key:   "pre",
+					Value: "echo hello world",
+				}},
 			},
 		},
 		{
 			name:  "single quoted value",
 			input: `foo post:'echo goodbye world'`,
-			want: map[string]string{
-				"bundle": "foo",
-				"post":   "echo goodbye world",
+			want: ParsedLine{
+				Bundle: "foo",
+				Annotations: []Annotation{{
+					Key:   "post",
+					Value: "echo goodbye world",
+				}},
 			},
 		},
 		{
 			name:  "mixed quotes",
 			input: `rupa/z pre:"echo 'hello' world" post:'echo "goodbye" world'`,
-			want: map[string]string{
-				"bundle": "rupa/z",
-				"pre":    "echo 'hello' world",
-				"post":   `echo "goodbye" world`,
+			want: ParsedLine{
+				Bundle: "rupa/z",
+				Annotations: []Annotation{
+					{Key: "pre", Value: "echo 'hello' world"},
+					{Key: "post", Value: `echo "goodbye" world`},
+				},
 			},
 		},
 		{
 			name:  "escaped characters in double quotes",
 			input: `foo pre:"echo \"hello\" world"`,
-			want: map[string]string{
-				"bundle": "foo",
-				"pre":    `echo "hello" world`,
+			want: ParsedLine{
+				Bundle: "foo",
+				Annotations: []Annotation{{
+					Key:   "pre",
+					Value: `echo "hello" world`,
+				}},
 			},
 		},
 		{
 			name:  "comment ignored",
 			input: `foo kind:zsh # this is a comment`,
-			want: map[string]string{
-				"bundle": "foo",
-				"kind":   "zsh",
+			want: ParsedLine{
+				Bundle: "foo",
+				Annotations: []Annotation{{
+					Key:   "kind",
+					Value: "zsh",
+				}},
 			},
 		},
 		{
 			name:  "trailing whitespace",
 			input: "   foo    kind:zsh   ",
-			want: map[string]string{
-				"bundle": "foo",
-				"kind":   "zsh",
+			want: ParsedLine{
+				Bundle: "foo",
+				Annotations: []Annotation{{
+					Key:   "kind",
+					Value: "zsh",
+				}},
 			},
 		},
 		{
 			name:  "backslash escape",
 			input: "foo/bar pre:echo\\ here",
-			want: map[string]string{
-				"bundle": "foo/bar",
-				"pre":    "echo here",
+			want: ParsedLine{
+				Bundle: "foo/bar",
+				Annotations: []Annotation{{
+					Key:   "pre",
+					Value: "echo here",
+				}},
 			},
 		},
 		{
 			name:  "path with slashes",
 			input: `ohmyzsh/ohmyzsh path:plugins/git`,
-			want: map[string]string{
-				"bundle": "ohmyzsh/ohmyzsh",
-				"path":   "plugins/git",
+			want: ParsedLine{
+				Bundle: "ohmyzsh/ohmyzsh",
+				Annotations: []Annotation{{
+					Key:   "path",
+					Value: "plugins/git",
+				}},
 			},
 		},
 		{
 			name:  "empty line",
 			input: ``,
-			want:  map[string]string{},
+			want:  ParsedLine{},
 		},
 		{
 			name:    "missing key value colon",
@@ -125,34 +151,38 @@ func TestParseLine(t *testing.T) {
 		{
 			name:  "multiple annotations",
 			input: `foo/bar kind:zsh branch:main path:plugins/git`,
-			want: map[string]string{
-				"bundle": "foo/bar",
-				"kind":   "zsh",
-				"branch": "main",
-				"path":   "plugins/git",
+			want: ParsedLine{
+				Bundle: "foo/bar",
+				Annotations: []Annotation{
+					{Key: "kind", Value: "zsh"},
+					{Key: "branch", Value: "main"},
+					{Key: "path", Value: "plugins/git"},
+				},
 			},
 		},
 		{
 			name:  "bundle-like token",
 			input: `kind:zsh`,
-			want: map[string]string{
-				"bundle": "kind:zsh",
+			want: ParsedLine{
+				Bundle: "kind:zsh",
 			},
 		},
 		{
 			name:  "Full SSH URL",
 			input: `git@github.com:zsh-users/zsh-autosuggestions kind:zsh post:a:b:c  # comment`,
-			want: map[string]string{
-				"bundle": `git@github.com:zsh-users/zsh-autosuggestions`,
-				"kind":   "zsh",
-				"post":   "a:b:c",
+			want: ParsedLine{
+				Bundle: "git@github.com:zsh-users/zsh-autosuggestions",
+				Annotations: []Annotation{
+					{Key: "kind", Value: "zsh"},
+					{Key: "post", Value: "a:b:c"},
+				},
 			},
 		},
 		{
 			name:  "Full URL",
 			input: `https://github.com/zsh-users/zsh-autosuggestions`,
-			want: map[string]string{
-				"bundle": "https://github.com/zsh-users/zsh-autosuggestions",
+			want: ParsedLine{
+				Bundle: "https://github.com/zsh-users/zsh-autosuggestions",
 			},
 		},
 	}

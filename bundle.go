@@ -96,64 +96,59 @@ func ParseBundles(input string) ([]Bundle, error) {
 
 // ParseBundleLine parses a single bundle definition line.
 func ParseBundleLine(line string) (Bundle, error) {
-	values, err := ParseLine(line)
+	parsed, err := ParseLine(line)
 	if err != nil {
 		return Bundle{}, err
 	}
-	if len(values) == 0 {
+	if parsed.Bundle == "" {
 		return Bundle{}, nil
 	}
 
-	bundle, err := bundleFromMap(values)
+	bundle, err := bundleFromParsed(parsed)
 	if err != nil {
 		return Bundle{}, err
 	}
 	return bundle, nil
 }
 
-func bundleFromMap(values map[string]string) (Bundle, error) {
-	name, ok := values["bundle"]
-	if !ok || strings.TrimSpace(name) == "" {
+func bundleFromParsed(parsed ParsedLine) (Bundle, error) {
+	if strings.TrimSpace(parsed.Bundle) == "" {
 		return Bundle{}, fmt.Errorf("missing bundle name")
 	}
 
 	bundle := Bundle{
-		Name:             name,
-		ExtraAnnotations: make(map[string]string, len(values)-1),
+		Name:             parsed.Bundle,
+		ExtraAnnotations: make(map[string]string, len(parsed.Annotations)),
 	}
 
-	for key, value := range values {
-		if key == "bundle" {
-			continue
-		}
-
-		switch key {
+	for _, annotation := range parsed.Annotations {
+		switch annotation.Key {
 		case KeyKind:
-			if err := validateKind(value); err != nil {
+			if err := validateKind(annotation.Value); err != nil {
 				return Bundle{}, err
 			}
-			bundle.Kind = value
+			bundle.Kind = annotation.Value
 		case KeyBranch:
-			bundle.Branch = value
+			bundle.Branch = annotation.Value
 		case KeyPath:
-			bundle.Path = value
+			bundle.Path = annotation.Value
 		case KeyPin:
-			bundle.Pin = value
+			bundle.Pin = annotation.Value
 		case KeyConditional:
-			bundle.Conditional = value
+			bundle.Conditional = annotation.Value
 		case KeyAutoload:
-			bundle.Autoload = value
+			bundle.Autoload = annotation.Value
 		case KeyPre:
-			bundle.Pre = value
+			bundle.Pre = annotation.Value
 		case KeyPost:
-			bundle.Post = value
+			bundle.Post = annotation.Value
 		case KeyFpathRule:
-			if err := validateFpathRule(value); err != nil {
+			if err := validateFpathRule(annotation.Value); err != nil {
 				return Bundle{}, err
 			}
-			bundle.FpathRule = value
+			bundle.FpathRule = annotation.Value
 		default:
-			bundle.ExtraAnnotations[key] = value
+			bundle.ExtraAnnotations[annotation.Key] = annotation.Value
 		}
 	}
 
