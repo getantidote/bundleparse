@@ -16,6 +16,7 @@ type Bundle struct {
 	Pre              string
 	Post             string
 	FpathRule        string
+	Line             int
 	ExtraAnnotations map[string]string
 }
 
@@ -81,13 +82,18 @@ func ParseBundles(input string) ([]Bundle, error) {
 			continue
 		}
 
-		bundle, err := ParseBundleLine(line)
+		parsed, err := ParseLine(line)
 		if err != nil {
 			return nil, ParseError{Line: idx + 1, Err: err}
 		}
-		if bundle.Name == "" {
+		if parsed.Directive != BundleDirective || parsed.Name == "" {
 			continue
 		}
+		bundle, err := bundleFromParsed(parsed)
+		if err != nil {
+			return nil, ParseError{Line: idx + 1, Err: err}
+		}
+		bundle.Line = idx + 1
 		bundles = append(bundles, bundle)
 	}
 

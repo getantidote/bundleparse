@@ -70,12 +70,14 @@ func TestParseBundles(t *testing.T) {
 			Kind:             "zsh",
 			Branch:           "main",
 			Path:             "plugins/git",
+			Line:             2,
 			ExtraAnnotations: map[string]string{},
 		},
 		{
 			Name:             "ohmyzsh/ohmyzsh",
 			Kind:             "zsh",
 			Path:             "plugins/git",
+			Line:             4,
 			ExtraAnnotations: map[string]string{},
 		},
 	}
