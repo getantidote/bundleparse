@@ -100,7 +100,10 @@ func ParseBundleLine(line string) (Bundle, error) {
 	if err != nil {
 		return Bundle{}, err
 	}
-	if parsed.Bundle == "" {
+	if parsed.Directive != BundleDirective {
+		return Bundle{}, nil
+	}
+	if parsed.Name == "" {
 		return Bundle{}, nil
 	}
 
@@ -112,12 +115,15 @@ func ParseBundleLine(line string) (Bundle, error) {
 }
 
 func bundleFromParsed(parsed ParsedLine) (Bundle, error) {
-	if strings.TrimSpace(parsed.Bundle) == "" {
+	if parsed.Directive != BundleDirective {
+		return Bundle{}, fmt.Errorf("parsed line is not a bundle")
+	}
+	if strings.TrimSpace(parsed.Name) == "" {
 		return Bundle{}, fmt.Errorf("missing bundle name")
 	}
 
 	bundle := Bundle{
-		Name:             parsed.Bundle,
+		Name:             parsed.Name,
 		ExtraAnnotations: make(map[string]string, len(parsed.Annotations)),
 	}
 

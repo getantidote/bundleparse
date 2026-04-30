@@ -5,13 +5,21 @@ import (
 	"strings"
 )
 
+type Directive string
+
+const (
+	BundleDirective Directive = "bundle"
+	UsingDirective  Directive = "using"
+)
+
 type Annotation struct {
 	Key   string
 	Value string
 }
 
 type ParsedLine struct {
-	Bundle      string
+	Directive   Directive
+	Name        string
 	Annotations []Annotation
 }
 
@@ -41,13 +49,23 @@ func ParseLine(line string) (ParsedLine, error) {
 		i++
 	}
 
-	bundle := line[start:i]
+	name := line[start:i]
 
-	if bundle == "" {
+	if name == "" {
 		return result, nil
 	}
 
-	result.Bundle = bundle
+	if strings.HasPrefix(name, "using:") {
+		usingName := strings.TrimPrefix(name, "using:")
+		if usingName == "" {
+			return ParsedLine{}, fmt.Errorf("missing using target")
+		}
+		result.Directive = UsingDirective
+		result.Name = usingName
+	} else {
+		result.Directive = BundleDirective
+		result.Name = name
+	}
 
 	// --- parse remaining key:value tokens ---
 	for i < n {
