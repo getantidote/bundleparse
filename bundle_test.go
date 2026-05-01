@@ -87,6 +87,104 @@ func TestParseBundles(t *testing.T) {
 	}
 }
 
+func TestParseBundles_UsingDirectiveAppliesToBareBundle(t *testing.T) {
+	input := strings.Join([]string{
+		`using:ohmyzsh/ohmyzsh kind:zsh`,
+		`foo`,
+	}, "\n")
+
+	bundles, err := ParseBundles(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := []Bundle{
+		{
+			Name:             "ohmyzsh/ohmyzsh",
+			Kind:             "zsh",
+			Path:             "ohmyzsh/ohmyzsh/foo",
+			Line:             2,
+			ExtraAnnotations: map[string]string{},
+		},
+	}
+
+	if !reflect.DeepEqual(bundles, want) {
+		t.Fatalf("mismatch:\n got: %#v\nwant: %#v", bundles, want)
+	}
+}
+
+func TestParseBundles_UsingDirectivePreservesExplicitPath(t *testing.T) {
+	input := strings.Join([]string{
+		`using:ohmyzsh/ohmyzsh kind:zsh`,
+		`foo path:plugins/foo`,
+	}, "\n")
+
+	bundles, err := ParseBundles(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := []Bundle{
+		{
+			Name:             "ohmyzsh/ohmyzsh",
+			Kind:             "zsh",
+			Path:             "plugins/foo",
+			Line:             2,
+			ExtraAnnotations: map[string]string{},
+		},
+	}
+
+	if !reflect.DeepEqual(bundles, want) {
+		t.Fatalf("mismatch:\n got: %#v\nwant: %#v", bundles, want)
+	}
+}
+
+func TestParseBundles_UsingDirectiveAppliesToMultipleBareBundles(t *testing.T) {
+	input := strings.Join([]string{
+		`using:ohmyzsh/ohmyzsh path:plugins pin:abcdef`,
+		`git`,
+		`extract`,
+	}, "\n")
+
+	bundles, err := ParseBundles(input)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := []Bundle{
+		{
+			Name:             "ohmyzsh/ohmyzsh",
+			Kind:             "zsh",
+			Path:             "plugins/git",
+			Pin:              "abcdef",
+			Line:             2,
+			ExtraAnnotations: map[string]string{},
+		},
+		{
+			Name:             "ohmyzsh/ohmyzsh",
+			Kind:             "zsh",
+			Path:             "plugins/extract",
+			Pin:              "abcdef",
+			Line:             3,
+			ExtraAnnotations: map[string]string{},
+		},
+	}
+
+	if !reflect.DeepEqual(bundles, want) {
+		t.Fatalf("mismatch:\n got: %#v\nwant: %#v", bundles, want)
+	}
+}
+
+func TestParseBundleLine_DefaultsKindToZsh(t *testing.T) {
+	bundle, err := ParseBundleLine(`foo`)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if bundle.Kind != KindZsh {
+		t.Fatalf("expected default kind %q, got %q", KindZsh, bundle.Kind)
+	}
+}
+
 func TestParseBundleLine_InvalidAnnotation(t *testing.T) {
 	bundle, err := ParseBundleLine(`foo kind:zsh unknown:yes`)
 	if err != nil {

@@ -76,6 +76,7 @@ func ParseBundles(input string) ([]Bundle, error) {
 	input = strings.ReplaceAll(input, "\r\n", "\n")
 	lines := strings.Split(input, "\n")
 	bundles := make([]Bundle, 0, len(lines))
+	var usingDirective *ParsedLine
 
 	for idx, line := range lines {
 		if strings.TrimSpace(line) == "" {
@@ -86,9 +87,20 @@ func ParseBundles(input string) ([]Bundle, error) {
 		if err != nil {
 			return nil, ParseError{Line: idx + 1, Err: err}
 		}
+
+		if parsed.Directive == UsingDirective {
+			usingDirective = &parsed
+			continue
+		}
+
 		if parsed.Directive != BundleDirective || parsed.Name == "" {
 			continue
 		}
+
+		if usingDirective != nil && !strings.Contains(parsed.Name, "/") {
+			parsed = applyUsingDirective(parsed, *usingDirective)
+		}
+
 		bundle, err := bundleFromParsed(parsed)
 		if err != nil {
 			return nil, ParseError{Line: idx + 1, Err: err}
@@ -118,6 +130,49 @@ func ParseBundleLine(line string) (Bundle, error) {
 		return Bundle{}, err
 	}
 	return bundle, nil
+}
+
+func applyUsingDirective(parsed ParsedLine, using ParsedLine) ParsedLine {
+	originalName := parsed.Name
+	parsed.Name = using.Name
+
+	existing := make(map[string]struct{}, len(parsed.Annotations)+len(using.Annotations))
+	hasPath := false
+	for _, ann := range parsed.Annotations {
+		existing[ann.Key] = struct{}{}
+		if ann.Key == KeyPath {
+			hasPath = true
+		}
+	}
+
+	pathBase := using.Name
+	for _, ann := range using.Annotations {
+		if ann.Key == KeyPath {
+			pathBase = ann.Value
+			break
+		}
+	}
+
+	if !hasPath && pathBase != "" {
+		pathBase = strings.TrimSuffix(pathBase, "/")
+		parsed.Annotations = append(parsed.Annotations, Annotation{
+			Key:   KeyPath,
+			Value: pathBase + "/" + originalName,
+		})
+		existing[KeyPath] = struct{}{}
+	}
+
+	for _, ann := range using.Annotations {
+		if ann.Key == KeyPath {
+			continue
+		}
+		if _, ok := existing[ann.Key]; ok {
+			continue
+		}
+		parsed.Annotations = append(parsed.Annotations, ann)
+	}
+
+	return parsed
 }
 
 func bundleFromParsed(parsed ParsedLine) (Bundle, error) {
@@ -162,6 +217,10 @@ func bundleFromParsed(parsed ParsedLine) (Bundle, error) {
 		default:
 			bundle.ExtraAnnotations[annotation.Key] = annotation.Value
 		}
+	}
+
+	if bundle.Kind == "" {
+		bundle.Kind = KindZsh
 	}
 
 	return bundle, nil
