@@ -114,7 +114,7 @@ func parseLineWithUnicode(line string) (map[string]string, error) {
 	return result, nil
 }
 
-func BenchmarkParseLineCurrent(b *testing.B) {
+func BenchmarkParseLineMap(b *testing.B) {
 	line := `foo/bar kind:zsh pin:v1 branch:main conditional:if-true autoload:yes pre:"echo hi" post:'echo bye' fpath-rule:prepend unknown:yes`
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {

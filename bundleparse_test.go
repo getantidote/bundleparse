@@ -18,10 +18,9 @@ func TestParseLine(t *testing.T) {
 			want: ParsedLine{
 				Directive: BundleDirective,
 				Name:      "zsh-users/zsh-autosuggestions",
-				Annotations: []Annotation{{
-					Key:   "kind",
-					Value: "zsh",
-				}},
+				Annotations: map[string]string{
+					"kind": "zsh",
+				},
 			},
 		},
 		{
@@ -38,10 +37,9 @@ func TestParseLine(t *testing.T) {
 			want: ParsedLine{
 				Directive: BundleDirective,
 				Name:      "foo",
-				Annotations: []Annotation{{
-					Key:   "pre",
-					Value: "echo hello world",
-				}},
+				Annotations: map[string]string{
+					"pre": "echo hello world",
+				},
 			},
 		},
 		{
@@ -50,10 +48,9 @@ func TestParseLine(t *testing.T) {
 			want: ParsedLine{
 				Directive: BundleDirective,
 				Name:      "foo",
-				Annotations: []Annotation{{
-					Key:   "post",
-					Value: "echo goodbye world",
-				}},
+				Annotations: map[string]string{
+					"post": "echo goodbye world",
+				},
 			},
 		},
 		{
@@ -62,9 +59,9 @@ func TestParseLine(t *testing.T) {
 			want: ParsedLine{
 				Directive: BundleDirective,
 				Name:      "rupa/z",
-				Annotations: []Annotation{
-					{Key: "pre", Value: "echo 'hello' world"},
-					{Key: "post", Value: `echo "goodbye" world`},
+				Annotations: map[string]string{
+					"pre":  "echo 'hello' world",
+					"post": `echo "goodbye" world`,
 				},
 			},
 		},
@@ -74,10 +71,9 @@ func TestParseLine(t *testing.T) {
 			want: ParsedLine{
 				Directive: BundleDirective,
 				Name:      "foo",
-				Annotations: []Annotation{{
-					Key:   "pre",
-					Value: `echo "hello" world`,
-				}},
+				Annotations: map[string]string{
+					"pre": `echo "hello" world`,
+				},
 			},
 		},
 		{
@@ -86,10 +82,9 @@ func TestParseLine(t *testing.T) {
 			want: ParsedLine{
 				Directive: BundleDirective,
 				Name:      "foo",
-				Annotations: []Annotation{{
-					Key:   "kind",
-					Value: "zsh",
-				}},
+				Annotations: map[string]string{
+					"kind": "zsh",
+				},
 			},
 		},
 		{
@@ -98,10 +93,9 @@ func TestParseLine(t *testing.T) {
 			want: ParsedLine{
 				Directive: BundleDirective,
 				Name:      "foo",
-				Annotations: []Annotation{{
-					Key:   "kind",
-					Value: "zsh",
-				}},
+				Annotations: map[string]string{
+					"kind": "zsh",
+				},
 			},
 		},
 		{
@@ -110,10 +104,9 @@ func TestParseLine(t *testing.T) {
 			want: ParsedLine{
 				Directive: BundleDirective,
 				Name:      "foo/bar",
-				Annotations: []Annotation{{
-					Key:   "pre",
-					Value: "echo here",
-				}},
+				Annotations: map[string]string{
+					"pre": "echo here",
+				},
 			},
 		},
 		{
@@ -122,10 +115,9 @@ func TestParseLine(t *testing.T) {
 			want: ParsedLine{
 				Directive: BundleDirective,
 				Name:      "ohmyzsh/ohmyzsh",
-				Annotations: []Annotation{{
-					Key:   "path",
-					Value: "plugins/git",
-				}},
+				Annotations: map[string]string{
+					"path": "plugins/git",
+				},
 			},
 		},
 		{
@@ -164,10 +156,10 @@ func TestParseLine(t *testing.T) {
 			want: ParsedLine{
 				Directive: BundleDirective,
 				Name:      "foo/bar",
-				Annotations: []Annotation{
-					{Key: "kind", Value: "zsh"},
-					{Key: "branch", Value: "main"},
-					{Key: "path", Value: "plugins/git"},
+				Annotations: map[string]string{
+					"kind":   "zsh",
+					"branch": "main",
+					"path":   "plugins/git",
 				},
 			},
 		},
@@ -185,9 +177,9 @@ func TestParseLine(t *testing.T) {
 			want: ParsedLine{
 				Directive: BundleDirective,
 				Name:      "git@github.com:zsh-users/zsh-autosuggestions",
-				Annotations: []Annotation{
-					{Key: "kind", Value: "zsh"},
-					{Key: "post", Value: "a:b:c"},
+				Annotations: map[string]string{
+					"kind": "zsh",
+					"post": "a:b:c",
 				},
 			},
 		},
@@ -216,8 +208,16 @@ func TestParseLine(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Fatalf("mismatch:\n got: %#v\nwant: %#v", got, tt.want)
+			if got.Annotations == nil {
+				got.Annotations = map[string]string{}
+			}
+			want := tt.want
+			if want.Annotations == nil {
+				want.Annotations = map[string]string{}
+			}
+
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("mismatch:\n got: %#v\nwant: %#v", got, want)
 			}
 		})
 	}
@@ -232,10 +232,9 @@ func TestParseLine_UsingDirective(t *testing.T) {
 	want := ParsedLine{
 		Directive: UsingDirective,
 		Name:      "foo/bar",
-		Annotations: []Annotation{{
-			Key:   "kind",
-			Value: "zsh",
-		}},
+		Annotations: map[string]string{
+			"kind": "zsh",
+		},
 	}
 
 	if !reflect.DeepEqual(got, want) {

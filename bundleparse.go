@@ -12,15 +12,10 @@ const (
 	UsingDirective  Directive = "using"
 )
 
-type Annotation struct {
-	Key   string
-	Value string
-}
-
 type ParsedLine struct {
 	Directive   Directive
 	Name        string
-	Annotations []Annotation
+	Annotations map[string]string
 }
 
 func isSpace(b byte) bool {
@@ -28,7 +23,7 @@ func isSpace(b byte) bool {
 }
 
 func ParseLine(line string) (ParsedLine, error) {
-	result := ParsedLine{}
+	result := ParsedLine{Annotations: make(map[string]string, 8)}
 
 	var i int
 	n := len(line)
@@ -50,7 +45,6 @@ func ParseLine(line string) (ParsedLine, error) {
 	}
 
 	name := line[start:i]
-
 	if name == "" {
 		return result, nil
 	}
@@ -105,7 +99,6 @@ func ParseLine(line string) (ParsedLine, error) {
 		}
 
 		var val strings.Builder
-
 		switch line[i] {
 		case '"':
 			i++
@@ -163,7 +156,7 @@ func ParseLine(line string) (ParsedLine, error) {
 			}
 		}
 
-		result.Annotations = append(result.Annotations, Annotation{Key: key, Value: val.String()})
+		result.Annotations[key] = val.String()
 	}
 
 	return result, nil

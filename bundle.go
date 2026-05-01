@@ -136,40 +136,25 @@ func applyUsingDirective(parsed ParsedLine, using ParsedLine) ParsedLine {
 	originalName := parsed.Name
 	parsed.Name = using.Name
 
-	existing := make(map[string]struct{}, len(parsed.Annotations)+len(using.Annotations))
-	hasPath := false
-	for _, ann := range parsed.Annotations {
-		existing[ann.Key] = struct{}{}
-		if ann.Key == KeyPath {
-			hasPath = true
+	if _, ok := parsed.Annotations[KeyPath]; !ok {
+		pathBase := using.Name
+		if usingPath, ok2 := using.Annotations[KeyPath]; ok2 && usingPath != "" {
+			pathBase = usingPath
+		}
+		if pathBase != "" {
+			pathBase = strings.TrimSuffix(pathBase, "/")
+			parsed.Annotations[KeyPath] = pathBase + "/" + originalName
 		}
 	}
 
-	pathBase := using.Name
-	for _, ann := range using.Annotations {
-		if ann.Key == KeyPath {
-			pathBase = ann.Value
-			break
-		}
-	}
-
-	if !hasPath && pathBase != "" {
-		pathBase = strings.TrimSuffix(pathBase, "/")
-		parsed.Annotations = append(parsed.Annotations, Annotation{
-			Key:   KeyPath,
-			Value: pathBase + "/" + originalName,
-		})
-		existing[KeyPath] = struct{}{}
-	}
-
-	for _, ann := range using.Annotations {
-		if ann.Key == KeyPath {
+	for key, value := range using.Annotations {
+		if key == KeyPath {
 			continue
 		}
-		if _, ok := existing[ann.Key]; ok {
+		if _, ok := parsed.Annotations[key]; ok {
 			continue
 		}
-		parsed.Annotations = append(parsed.Annotations, ann)
+		parsed.Annotations[key] = value
 	}
 
 	return parsed
@@ -183,41 +168,59 @@ func bundleFromParsed(parsed ParsedLine) (Bundle, error) {
 		return Bundle{}, fmt.Errorf("missing bundle name")
 	}
 
-	bundle := Bundle{
-		Name:             parsed.Name,
-		ExtraAnnotations: make(map[string]string, len(parsed.Annotations)),
+	bundle := Bundle{Name: parsed.Name}
+	var extras map[string]string
+
+	if value, ok := parsed.Annotations[KeyKind]; ok {
+		if err := validateKind(value); err != nil {
+			return Bundle{}, err
+		}
+		bundle.Kind = value
+	}
+	if value, ok := parsed.Annotations[KeyBranch]; ok {
+		bundle.Branch = value
+	}
+	if value, ok := parsed.Annotations[KeyPath]; ok {
+		bundle.Path = value
+	}
+	if value, ok := parsed.Annotations[KeyPin]; ok {
+		bundle.Pin = value
+	}
+	if value, ok := parsed.Annotations[KeyConditional]; ok {
+		bundle.Conditional = value
+	}
+	if value, ok := parsed.Annotations[KeyAutoload]; ok {
+		bundle.Autoload = value
+	}
+	if value, ok := parsed.Annotations[KeyPre]; ok {
+		bundle.Pre = value
+	}
+	if value, ok := parsed.Annotations[KeyPost]; ok {
+		bundle.Post = value
+	}
+	if value, ok := parsed.Annotations[KeyFpathRule]; ok {
+		if err := validateFpathRule(value); err != nil {
+			return Bundle{}, err
+		}
+		bundle.FpathRule = value
 	}
 
-	for _, annotation := range parsed.Annotations {
-		switch annotation.Key {
-		case KeyKind:
-			if err := validateKind(annotation.Value); err != nil {
-				return Bundle{}, err
-			}
-			bundle.Kind = annotation.Value
-		case KeyBranch:
-			bundle.Branch = annotation.Value
-		case KeyPath:
-			bundle.Path = annotation.Value
-		case KeyPin:
-			bundle.Pin = annotation.Value
-		case KeyConditional:
-			bundle.Conditional = annotation.Value
-		case KeyAutoload:
-			bundle.Autoload = annotation.Value
-		case KeyPre:
-			bundle.Pre = annotation.Value
-		case KeyPost:
-			bundle.Post = annotation.Value
-		case KeyFpathRule:
-			if err := validateFpathRule(annotation.Value); err != nil {
-				return Bundle{}, err
-			}
-			bundle.FpathRule = annotation.Value
+	for key, value := range parsed.Annotations {
+		switch key {
+		case KeyKind, KeyBranch, KeyPath, KeyPin, KeyConditional, KeyAutoload, KeyPre, KeyPost, KeyFpathRule:
+			continue
 		default:
-			bundle.ExtraAnnotations[annotation.Key] = annotation.Value
+			if extras == nil {
+				extras = make(map[string]string, len(parsed.Annotations))
+			}
+			extras[key] = value
 		}
 	}
+
+	if extras == nil {
+		extras = map[string]string{}
+	}
+	bundle.ExtraAnnotations = extras
 
 	if bundle.Kind == "" {
 		bundle.Kind = KindZsh
