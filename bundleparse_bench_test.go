@@ -1,6 +1,7 @@
 package bundleparse
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"unicode"
@@ -126,5 +127,21 @@ func BenchmarkParseLineUnicode(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		_, _ = parseLineWithUnicode(line)
+	}
+}
+
+func BenchmarkParseLargeBundleFile(b *testing.B) {
+	data, err := os.ReadFile("tests/data/zsh_plugins_big.txt")
+	if err != nil {
+		b.Fatalf("read test data: %v", err)
+	}
+	input := string(data)
+
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, err := ParseBundles(input)
+		if err != nil {
+			b.Fatalf("parse bundles: %v", err)
+		}
 	}
 }

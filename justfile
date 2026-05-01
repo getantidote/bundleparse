@@ -11,6 +11,10 @@ default: build
 test:
     go test {{TEST_OPTIONS}} -failfast -race {{SOURCE_FILES}} -run {{TEST_PATTERN}} -timeout=2m
 
+# Run benchmarks from Go
+benchmark:
+	go test -bench=. -count=1 ./...
+
 # Run all the linters
 lint:
     golangci-lint run ./...
